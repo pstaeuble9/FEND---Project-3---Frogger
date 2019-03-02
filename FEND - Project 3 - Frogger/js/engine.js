@@ -1,3 +1,4 @@
+"use strict";
 /* Engine.js
  * This file provides the game loop functionality (update entities and render),
  * draws the initial game board on the screen, and then calls the update and
@@ -13,9 +14,7 @@
  * the canvas' context (ctx) object globally available to make writing app.js
  * a little simpler to work with.
  */
-/*jshint -W030 */
 let Engine = (function(global) {
-    "use strict";
     /* Predefine the variables we'll be using within this scope,
      * create the canvas element, grab the 2D context for that canvas
      * set the canvas elements height/width and add it to the DOM.
@@ -82,18 +81,16 @@ let Engine = (function(global) {
      * on the entities themselves within your app.js file).
      */
     function update(dt) {
-        // Credit https://discussions.udacity.com/t/finite-state-machine-to-model-game-states/21955
-        // for Finite State Machine
-        // Change game behavior according to game state
+        /* Credit https://discussions.udacity.com/t/finite-state-machine-to-model-game-states/21955
+        * for Finite State Machine
+         Change game behavior according to game state*/
         switch (currentGameState) {
             case "startGame":
                 // Turn the keypress event listener in app.js off
                 document.removeEventListener("keyup", input);
-                // Listen for enter key, switch game state to inGame when pressed
-                // Credit http://stackoverflow.com/questions/14542062/eventlistener-enter-key
-                let startInput = function(e) {
+                var startInput = function(e) {
                     // Use e.which or e.keyCode for browser compatibility
-                    let key = e.which || e.keyCode;
+                    var key = e.which || e.keyCode;
                     // Enter key changes game state to "inGame"
                     if (key === 13) {
                         currentGameState = "inGame";
@@ -107,14 +104,15 @@ let Engine = (function(global) {
                 document.addEventListener('keyup', input);
                 // Call updateEntities to update each entity in the game
                 updateEntities(dt);
-                // Fix player head being stuck
+                // Fix player head staying rendered behind top tiles
+                // Credit to https://discussions.udacity.com/t/canvas-not-clearing-player-bug-fixed/29714
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 break;
             case "gameOver":
                 // Turn the keypress event listener in app.js off
                 document.removeEventListener('keyup', input);
-                // Listen for enter key, start game on keyDown
-                let gameoverInput = function(e) {
+                // Listen for enter key, switch game state to inGame when pressed
+                var gameoverInput = function(e) {
                     var key = e.which || e.keyCode;
                     if (key === 13) {
                         currentGameState = "inGame";
@@ -243,20 +241,22 @@ let Engine = (function(global) {
                     ctx.drawImage(Resources.get(rowImages[row]), col * 101, row * 83);
                     // Text to display over the game board
                     ctx.fillStyle = "red";
+                    ctx.font = "60px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillText("Game Over!", canvas.width/2, canvas.height/2.2);
+                    ctx.fillStyle = "Black";
                     ctx.font = "40px Comic Sans MS";
                     ctx.textAlign = "center";
-                    ctx.fillText("Game Over!", canvas.width/2, canvas.height/3);
-                    ctx.fillStyle = "red";
-                    ctx.font = "20px Comic Sans MS";
-                    ctx.textAlign = "center";
-                    ctx.fillText("Press Enter To Restart", canvas.width/2, canvas.height/2.6);
+                    ctx.fillText("Press Enter To Restart", canvas.width/2, canvas.height/1.35);
                 }
             }
             break;
             }
     }
 
-    /* call the render functions you have defined
+    /* This function is called by the render function and is called on each game
+     * tick. It's purpose is to then call the render functions you have defined
+     * on your enemy and player entities within app.js
      */
     function renderEntities() {
         /* Loop through all of the objects within the allEnemies array and call
@@ -271,13 +271,41 @@ let Engine = (function(global) {
         heart.render();
     }
 
-    // Load all images
+    /* This function does nothing but it could have been a good place to
+     * handle game reset states - maybe a new game menu or a game over screen
+     * those sorts of things. It's only called once by the init() method.
+     */
+    //Reset the game to its original state and change currentGameState to gameOver
+    function reset() {
+        currentGameState = "gameOver";
+        player.characterReset();
+        heart.heartReset();
+        clearTimeout(heart.heartWaitTime);
+        gem.gemReset();
+        clearTimeout(gem.gemWaitTime);
+        speedMultiplier = 40;
+        player.playerScore = 0;
+        player.playerLives = 3;
+        allEnemies = [];
+        //Instantiate all enemies, set to 3
+        for (var i = 0; i < 3; i++) {
+            //startSpeed is a random number from 1-10 times speedMultiplier
+            var startSpeed = speedMultiplier * Math.floor(Math.random() * 10 + 1);
+            //enemys start off canvas (x = -100) at the following Y positions: 60, 145, 230
+            allEnemies.push(new Enemy(-100, 60 + (85 * i), startSpeed));
+        }
+    }
+
+    /* Go ahead and load all of the images we know we're going to need to
+     * draw our game level. Then set init as the callback method, so that when
+     * all of these images are properly loaded our game will start.
+     */
     Resources.load([
         'images/stone-block.png',
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-horn-girl.png',
+        'images/char-boy.png',
         'images/Gem_Orange.png',
         'images/Heart.png',
         ]);
